@@ -25,20 +25,11 @@ import           Level02.Types           (ContentType, Error, RqType,
 -- --------------------------------------------
 
 -- | Some helper functions to make our lives a little more DRY.
-mkResponse
-  :: Status
-  -> ContentType
-  -> LBS.ByteString
-  -> Response
-mkResponse =
-  error "mkResponse not implemented"
+mkResponse :: Status -> ContentType -> LBS.ByteString -> Response
+mkResponse s content str = responseLBS s [("Content-Type", renderContentType content)] str
 
-resp200
-  :: ContentType
-  -> LBS.ByteString
-  -> Response
-resp200 =
-  error "resp200 not implemented"
+resp200 :: ContentType -> LBS.ByteString -> Response
+resp200 = mkResponse status200
 
 resp404
   :: ContentType

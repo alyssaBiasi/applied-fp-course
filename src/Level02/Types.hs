@@ -57,6 +57,7 @@ newtype CommentText = CommentText Text
 -- ViewRq : Which needs the topic being requested.
 -- ListRq : Which doesn't need anything and lists all of the current topics.
 data RqType = AddRq Topic CommentText | ViewRq Topic | ListRq
+  deriving Show
 
 -- Not everything goes according to plan, but it's important that our types
 -- reflect when errors can be introduced into our program. Additionally it's
@@ -64,6 +65,7 @@ data RqType = AddRq Topic CommentText | ViewRq Topic | ListRq
 
 -- Fill in the error constructors as you need them.
 data Error = EmptyTopic | EmptyComment
+  deriving Show
 
 
 -- Provide the constructors for a sum type to specify the `ContentType` Header,
@@ -73,6 +75,7 @@ data Error = EmptyTopic | EmptyComment
 -- - plain text
 -- - json
 data ContentType = PlainTextContent | JsonContent
+  deriving Show
 
 -- The ``ContentType`` constructors don't match what is required for the header
 -- information. Because ``wai`` uses a stringly type. So write a function that

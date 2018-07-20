@@ -10,13 +10,12 @@ import           Network.HTTP.Types       (Status, hContentType, status200,
                                            status400, status404)
 
 import qualified Data.ByteString.Lazy     as LBS
-
 import           Data.Either              (either)
 
 import           Data.Text                (Text)
 import           Data.Text.Encoding       (decodeUtf8)
 
-import           Level02.Types           (ContentType, Error, RqType,
+import           Level02.Types           (ContentType (PlainTextContent), Error (..), RqType (..),
                                            mkCommentText, mkTopic,
                                            renderContentType)
 
@@ -31,64 +30,70 @@ mkResponse s content str = responseLBS s [("Content-Type", renderContentType con
 resp200 :: ContentType -> LBS.ByteString -> Response
 resp200 = mkResponse status200
 
-resp404
-  :: ContentType
-  -> LBS.ByteString
-  -> Response
-resp404 =
-  error "resp404 not implemented"
+resp404 :: ContentType -> LBS.ByteString -> Response
+resp404 = mkResponse status404
 
-resp400
-  :: ContentType
-  -> LBS.ByteString
-  -> Response
-resp400 =
-  error "resp400 not implemented"
+resp400 :: ContentType -> LBS.ByteString -> Response
+resp400 = mkResponse status400
 
 -- These next few functions will take raw request information and construct one
 -- of our types.
-mkAddRequest
-  :: Text
-  -> LBS.ByteString
-  -> Either Error RqType
-mkAddRequest =
-  error "mkAddRequest not implemented"
+mkAddRequest :: Text -> LBS.ByteString -> Either Error RqType
+mkAddRequest txt byteString = AddRq <$> eitherTopic <*> eitherComment
+--mkAddRequest txt byteString = pure AddRq <*> eitherTopic <*> eitherComment
   where
+    eitherTopic = mkTopic txt
+    eitherComment = mkCommentText (lazyByteStringToStrictText byteString)
     -- This is a helper function to assist us in going from a Lazy ByteString, to a Strict Text
-    lazyByteStringToStrictText =
-      decodeUtf8 . LBS.toStrict
+    lazyByteStringToStrictText = decodeUtf8 . LBS.toStrict
+--mkAddRequest txt byteString = eitherTopic >>=
+--                                \t -> eitherComment >>=
+--                                    \c -> pure $ AddRq t c
+--mkAddRequest txt byteString = do
+--    topic <- eitherTopic
+--    comment <- eitherComment
+--    pure $ AddRq topic comment
+--  where
+--    eitherTopic = mkTopic txt
+--    eitherComment = mkCommentText (lazyByteStringToStrictText byteString)
+--    -- This is a helper function to assist us in going from a Lazy ByteString, to a Strict Text
+--    lazyByteStringToStrictText = decodeUtf8 . LBS.toStrict
 
 -- This has a number of benefits, we're able to isolate our validation
 -- requirements into smaller components that are simpler to maintain and verify.
 -- It also allows for greater reuse and it also means that validation is not
 -- duplicated across the application, maybe incorrectly.
-mkViewRequest
-  :: Text
-  -> Either Error RqType
-mkViewRequest =
-  error "mkViewRequest not implemented"
 
-mkListRequest
-  :: Either Error RqType
-mkListRequest =
-  error "mkListRequest not implemented"
+mkViewRequest :: Text -> Either Error RqType
+mkViewRequest = (fmap ViewRq) . mkTopic
 
-mkErrorResponse
-  :: Error
-  -> Response
-mkErrorResponse =
-  error "mkErrorResponse not implemented"
+mkListRequest :: Either Error RqType
+mkListRequest = pure ListRq
+
+--data Error = EmptyTopic | EmptyComment
+mkErrorResponse :: Error -> Response
+mkErrorResponse EmptyTopic = resp400 PlainTextContent "No topic"
+mkErrorResponse EmptyComment = resp400 PlainTextContent "No comment"
+--mkErrorResponse _ = resp400 PlainTextContent "Invalid request"
 
 -- Use our ``RqType`` helpers to write a function that will take the input
 -- ``Request`` from the Wai library and turn it into something our application
 -- cares about.
-mkRequest
-  :: Request
-  -> IO ( Either Error RqType )
-mkRequest =
+--POST /<topic>/add
+--GET  /<topic>/view
+--GET  /list
+mkRequest :: Request -> IO ( Either Error RqType )
+mkRequest rq =
+  let path = pathInfo rq
+  in case path of
+        ["list"] -> pure mkListRequest
+        [topic, "view"] -> pure $ mkViewRequest topic
+        [topic, "add"] -> fmap (mkAddRequest topic) (strictRequestBody rq)
+        _ -> pure $ Left EmptyTopic
   -- Remembering your pattern-matching skills will let you implement the entire
   -- specification in this function.
-  error "mkRequest not implemented"
+
+--getRequest :: LBS.ByteString -> [Text] -> Method -> Either Error RqType
 
 -- If we find that we need more information to handle a request, or we have a
 -- new type of request that we'd like to handle then we update the ``RqType``

@@ -64,7 +64,7 @@ data RqType = AddRq Topic CommentText | ViewRq Topic | ListRq
 -- useful to be able to be descriptive about what went wrong.
 
 -- Fill in the error constructors as you need them.
-data Error = EmptyTopic | EmptyComment
+data Error = EmptyTopic | EmptyComment | UnknownRequest
   deriving Show
 
 

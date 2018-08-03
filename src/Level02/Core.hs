@@ -6,7 +6,7 @@ import           Network.Wai              (Application, Request, Response,
                                            strictRequestBody)
 import           Network.Wai.Handler.Warp (run)
 
-import           Network.HTTP.Types       (Status, hContentType, status200,
+import           Network.HTTP.Types       (Status, hContentType, Method, status200,
                                            status400, status404)
 
 import qualified Data.ByteString.Lazy     as LBS
@@ -16,7 +16,7 @@ import           Data.Text                (Text)
 import           Data.Text.Encoding       (decodeUtf8)
 
 import           Level02.Types           (ContentType (PlainTextContent), Error (..), RqType (..),
-                                           mkCommentText, mkTopic,
+                                           mkCommentText, mkTopic, getTopic,
                                            renderContentType)
 
 -- --------------------------------------------
@@ -74,6 +74,7 @@ mkListRequest = pure ListRq
 mkErrorResponse :: Error -> Response
 mkErrorResponse EmptyTopic = resp400 PlainTextContent "No topic"
 mkErrorResponse EmptyComment = resp400 PlainTextContent "No comment"
+mkErrorResponse UnknownRequest = resp400 PlainTextContent "Unknown request"
 --mkErrorResponse _ = resp400 PlainTextContent "Invalid request"
 
 -- Use our ``RqType`` helpers to write a function that will take the input
@@ -83,17 +84,26 @@ mkErrorResponse EmptyComment = resp400 PlainTextContent "No comment"
 --GET  /<topic>/view
 --GET  /list
 mkRequest :: Request -> IO ( Either Error RqType )
-mkRequest rq =
+mkRequest rq = do
+  body <- strictRequestBody rq
   let path = pathInfo rq
-  in case path of
-        ["list"] -> pure mkListRequest
-        [topic, "view"] -> pure $ mkViewRequest topic
-        [topic, "add"] -> fmap (mkAddRequest topic) (strictRequestBody rq)
-        _ -> pure $ Left EmptyTopic
+      method = requestMethod rq
+  pure $ getRequest body path method
+--mkRequest rq =
+--  let path = pathInfo rq
+--  in case path of
+--        ["list"] -> pure mkListRequest
+--        [topic, "view"] -> pure $ mkViewRequest topic
+--        [topic, "add"] -> fmap (mkAddRequest topic) (strictRequestBody rq)
+--        _ -> pure $ Left EmptyTopic
   -- Remembering your pattern-matching skills will let you implement the entire
   -- specification in this function.
 
---getRequest :: LBS.ByteString -> [Text] -> Method -> Either Error RqType
+getRequest :: LBS.ByteString -> [Text] -> Method -> Either Error RqType
+getRequest _    ["list"]        "GET" = mkListRequest
+getRequest _    [topic, "view"] "GET" = mkViewRequest topic
+getRequest body [topic, "add"]  "POST" = mkAddRequest topic body
+getRequest _ _ _ = Left UnknownRequest
 
 -- If we find that we need more information to handle a request, or we have a
 -- new type of request that we'd like to handle then we update the ``RqType``
@@ -106,11 +116,10 @@ mkRequest rq =
 -- For now, return a made-up value for each of the responses as we don't have
 -- any persistent storage. Plain text responses that contain "X not implemented
 -- yet" should be sufficient.
-handleRequest
-  :: RqType
-  -> Either Error Response
-handleRequest =
-  error "handleRequest not implemented"
+handleRequest :: RqType -> Either Error Response
+handleRequest ListRq = Right $ resp200 PlainTextContent "hello"
+handleRequest (ViewRq _) = Right $ resp200 PlainTextContent "X not implemented"
+handleRequest (AddRq _ _) = Right $ resp200 PlainTextContent "X not implemented"
 
 -- Reimplement this function using the new functions and ``RqType`` constructors
 -- as a guide.

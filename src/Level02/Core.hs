@@ -123,10 +123,16 @@ handleRequest (AddRq _ _) = Right $ resp200 PlainTextContent "X not implemented"
 
 -- Reimplement this function using the new functions and ``RqType`` constructors
 -- as a guide.
-app
-  :: Application
-app =
-  error "app not reimplemented"
+app :: Application
+app rq respondWith = do
+  eitherRq <- mkRequest rq
+  let eitherResponse = eitherRq >>= handleRequest
+      response = either mkErrorResponse id eitherResponse
+  respondWith response
+
+--IO ( Either Error RqType )
+-- Either Error Response
+-- mkErrorResponse :: Error -> Response
 
 runApp :: IO ()
 runApp = run 3000 app
